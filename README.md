@@ -53,7 +53,7 @@ git clone https://github.com/Second-Order-Systems/curl-hire && cd curl-hire
 npm install
 ```
 
-Everything applicants see is in **[`apply.config.js`](apply.config.js)**: company, role, pay, the pages in the shell, hidden commands, questions and the final screen. Search it for `TODO`. The [config reference](docs/CUSTOMIZE.md) covers every option, and [`examples/2os.config.js`](examples/2os.config.js) is a complete one from production.
+Everything applicants see is in **[`apply.config.js`](apply.config.js)**: company, role, pay, the pages in the shell, hidden commands, questions, the final screen, colours and every line of copy. It ships filled in for a made-up company, Acme Robotics, as a complete working example you can edit. The [config reference](docs/CUSTOMIZE.md) covers every option, and [`examples/2os.config.js`](examples/2os.config.js) is a complete one from production.
 
 To see the result without deploying anything:
 

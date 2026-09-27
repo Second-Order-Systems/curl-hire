@@ -3,12 +3,40 @@
 //   renderScript() → apply.sh with your questions and pages spliced in
 //   sheetColumns() → the Google Sheet columns, in order
 // checkConfig() runs first and explains any mistake in the config.
+// Anything optional in the config falls back to the defaults below.
 
 export const JUNK = ["test", "testing", "asdf", "abc", "xyz", "na", "n/a", "none", "nothing", "idk", "dunno", "no",
   "nil", "null", "nope", "hi", "hello", "yes", "ok", "okay", "random", "blah", "lol", "hmm", ".", "..", "...", "-", "--"];
 export const DISPOSABLE = ["mailinator.com", "yopmail.com", "guerrillamail.com", "10minutemail.com", "tempmail.com",
   "temp-mail.org", "trashmail.com", "sharklasers.com", "getnada.com", "dispostable.com", "maildrop.cc",
   "throwawaymail.com", "fakeinbox.com", "mintemail.com"];
+
+// The fixed lines of the script. Override any of them with `messages` in the config.
+export const DEFAULT_MESSAGES = {
+  begin: "Type apply to begin, or help to look around.", // "apply" and "help" get the accent colour
+  notFound: "Command not found. Try help.",
+  goodbye: "See you.",
+  firstQuestion: "Enter moves on. Choices take one key press.",
+  reviewTitle: "Here's what you wrote.",
+  reviewHint: "Press Enter to send, or type a number to edit that answer.",
+  received: "✓ Received. Thank you.",
+  nextTitle: "What happens next",
+  idLabel: "Your application ID:",
+  stopped: "Stopped. Nothing was sent.",
+};
+// 256-colour terminal codes: https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
+export const DEFAULT_THEME = { accent: 141, error: 203, success: 114 };
+
+// Junk lists plus whatever the config adds, shared by the script and the server.
+export function checks(c) {
+  const extra = c.checks || {};
+  const low = (xs) => (xs || []).map((x) => String(x).trim().toLowerCase()).filter(Boolean);
+  return {
+    junk: [...new Set([...JUNK, ...low(extra.extraJunk)])],
+    disposable: [...new Set([...DISPOSABLE, ...low(extra.extraDisposableDomains)])],
+    maxLinks: extra.maxLinks ?? 8,
+  };
+}
 
 const TYPES = ["text", "name", "email", "links", "choice"];
 const BUILTINS = ["apply", "start", "./apply", "help", "site", "web", "website", "clear", "exit", "quit", "logout"];
@@ -71,6 +99,21 @@ export function checkConfig(c) {
     need(typeof p.body === "string", `page "${p.command}": body is missing`);
     cmds.add(p.command);
   }
+  for (const [k, v] of Object.entries(c.messages || {})) {
+    need(k in DEFAULT_MESSAGES, `messages.${k} isn't a message the script uses (${Object.keys(DEFAULT_MESSAGES).join(", ")})`);
+    need(typeof v === "string" && v.trim() && !v.includes("\n"), `messages.${k} must be one line of text`);
+  }
+  for (const [k, v] of Object.entries(c.theme || {})) {
+    need(k in DEFAULT_THEME, `theme.${k} isn't a colour the script uses (${Object.keys(DEFAULT_THEME).join(", ")})`);
+    need(Number.isInteger(v) && v >= 0 && v <= 255, `theme.${k} must be a 256-colour code from 0 to 255`);
+  }
+  const ck = c.checks || {};
+  need(ck.maxLinks === undefined || (Number.isInteger(ck.maxLinks) && ck.maxLinks >= 1 && ck.maxLinks <= 20),
+    "checks.maxLinks must be a number from 1 to 20");
+  for (const k of ["extraJunk", "extraDisposableDomains"]) {
+    need(ck[k] === undefined || (Array.isArray(ck[k]) && ck[k].every((x) => typeof x === "string" && !/\s/.test(x.trim()))),
+      `checks.${k} must be a list of single words`);
+  }
   for (const h of c.hiddenCommands || []) {
     const runs = [].concat(h.run || []);
     need(runs.length > 0 && runs.every((r) => typeof r === "string" && r.trim()), "each hidden command needs run: \"text\" or a list of them");
@@ -131,6 +174,12 @@ export function runCommand(origin) {
 export function renderScript(template, c, origin) {
   const Q = c.questions;
   const run = runCommand(origin);
+  const msg = { ...DEFAULT_MESSAGES, ...c.messages };
+  const theme = { ...DEFAULT_THEME, ...c.theme };
+  const ck = checks(c);
+  // The begin line, with "apply" and "help" in the accent colour.
+  const begin = msg.begin.split(/\b(apply|help)\b/).filter(Boolean)
+    .map((p) => (p === "apply" || p === "help" ? `"$A"${q(p)}"$N"` : q(p))).join("");
   const header = [
     "# ──────────────────────────────────────────────────────────────────",
     `#  ${c.company.name} · ${c.role.title}`,
@@ -166,6 +215,19 @@ export function renderScript(template, c, origin) {
     `TITLE=${q(`${c.company.name} · ${c.role.title}`)}`,
     `DETAILS=${q(c.role.details || "")}`,
     `WEBSITE=${q(c.company.website || "")}`,
+    `ACCENT=${theme.accent}; ERROR=${theme.error}; SUCCESS=${theme.success}`,
+    "",
+    "# ── Messages ─────────────────────────────────────────────────────",
+    `MSG_NOT_FOUND=${q(msg.notFound)}`,
+    `MSG_GOODBYE=${q(msg.goodbye)}`,
+    `MSG_FIRST=${q(msg.firstQuestion)}`,
+    `MSG_REVIEW_TITLE=${q(msg.reviewTitle)}`,
+    `MSG_REVIEW_HINT=${q(msg.reviewHint)}`,
+    `MSG_RECEIVED=${q(msg.received)}`,
+    `MSG_NEXT_TITLE=${q(msg.nextTitle)}`,
+    `MSG_ID_LABEL=${q(msg.idLabel)}`,
+    `MSG_STOPPED=${q(msg.stopped)}`,
+    `begin_line() { printf '%s\\n' ${begin}; }`,
     "",
     "# ── The questions ────────────────────────────────────────────────",
     arr("KEYS", Q.map((x) => x.key)),
@@ -181,8 +243,9 @@ export function renderScript(template, c, origin) {
     `MIN=(${Q.map((x) => x.min || 0).join(" ")})        # minimum characters`,
     `MINW=(${Q.map((x) => x.words || 0).join(" ")})       # minimum words`,
     `PROSE=(${Q.map((x) => (x.type === "text" && x.prose !== false ? 1 : 0)).join(" ")})      # must read like real words`,
-    `JUNK=${q(` ${JUNK.join(" ")} `)}`,
-    `DISPOSABLE=${q(` ${DISPOSABLE.join(" ")} `)}`,
+    `JUNK=${q(` ${ck.junk.join(" ")} `)}`,
+    `DISPOSABLE=${q(` ${ck.disposable.join(" ")} `)}`,
+    `MAX_LINKS=${ck.maxLinks}`,
     "",
     "# ── Pages for the little shell ───────────────────────────────────",
     `logo() {${c.logo && c.logo.trim() ? `\n  ${printLines(c.logo)}\n` : " :; "}}`,

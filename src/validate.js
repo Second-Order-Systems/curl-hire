@@ -1,14 +1,14 @@
 // The server-side answer checks. apply.sh runs the same ones as people type,
 // but only these count: editing the script gets nobody past them.
 
-import { JUNK as JUNK_LIST, DISPOSABLE as DISPOSABLE_LIST } from "./render.js";
+import { checks } from "./render.js";
 
-const JUNK = new Set(JUNK_LIST);
-const DISPOSABLE = new Set(DISPOSABLE_LIST);
 const LINK = /^(@[A-Za-z0-9_.-]{1,40}|(https?:\/\/)?[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+(\/\S*)?)$/;
 
-// RULES comes from rules(config) in render.js.
-export function makeValidator(RULES) {
+// RULES comes from rules(config) and CHECKS from checks(config), both in render.js.
+export function makeValidator(RULES, CHECKS = checks({})) {
+  const JUNK = new Set(CHECKS.junk);
+  const DISPOSABLE = new Set(CHECKS.disposable);
   // Returns a message saying which answer was refused, why, and how to fix it. "" if all pass.
   return function validate(answers) {
     for (const [key, r] of Object.entries(RULES)) {
@@ -43,7 +43,7 @@ export function makeValidator(RULES) {
       }
       if (r.kind === "links") {
         const parts = v.split(/\s+/).filter(Boolean);
-        if (parts.length > 8) return fail(`that's ${parts.length} links, and the limit is 8.`);
+        if (parts.length > CHECKS.maxLinks) return fail(`that's ${parts.length} links, and the limit is ${CHECKS.maxLinks}.`);
         const bad = parts.find((p) => !LINK.test(p));
         if (bad) return fail(`"${bad}" isn't a link or @handle. Use links like github.com/you or handles like @you, separated by spaces.`);
       }

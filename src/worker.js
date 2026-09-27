@@ -10,7 +10,7 @@
 
 import config from "../apply.config.js";
 import TEMPLATE from "./apply.sh";
-import { checkConfig, rules, sheetColumns, renderScript, runCommand } from "./render.js";
+import { checkConfig, rules, checks, sheetColumns, renderScript, runCommand } from "./render.js";
 import { makeValidator } from "./validate.js";
 
 checkConfig(config);
@@ -21,7 +21,7 @@ const FIELDS = Object.keys(RULES);
 const EMAIL = FIELDS.find((f) => RULES[f].kind === "email");
 const COLUMNS = sheetColumns(config);
 const DIGEST = (config.digest || []).map((k) => COLUMNS.find(([key]) => key === k)[1]);
-const validate = makeValidator(RULES);
+const validate = makeValidator(RULES, checks(config));
 
 const LIMITS = { minSeconds: 45, maxSessionHours: 3, perHour: 5, ...config.limits };
 

@@ -163,6 +163,51 @@ A digest line looks like this, with the first field in bold:
 
 The digest goes out at 7 pm in the Apps Script project's time zone. To change the time, edit `DIGEST_HOUR` in `Code.gs` and run `setup` again.
 
+## Junk checks
+
+Every `text` and `name` answer is checked against a built-in list of placeholder answers ("test", "idk", "n/a", and more). Emails are checked against a list of temporary-inbox domains. You can add to both, and set how many links one answer can hold:
+
+```js
+checks: {
+  extraJunk: ["tbd", "wip"],                // refused as placeholder answers (matched as whole answers, any case)
+  extraDisposableDomains: ["spam.example"], // refused email domains
+  maxLinks: 8,                              // most links/handles in a `links` answer (1–20)
+},
+```
+
+The script and the server both use these lists, so they always agree.
+
+## Colours
+
+The colours are 256-colour terminal codes, from 0 to 255 ([here's the chart](https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit)). Colours are switched off automatically when the output isn't a terminal.
+
+```js
+theme: {
+  accent: 141,  // logo, commands, option numbers, the application ID
+  error: 203,   // "that answer needs work" messages
+  success: 114, // the ✓ on the final screen
+},
+```
+
+## Messages
+
+Every fixed line in the script can be changed. Leave out any you're happy with. Each must stay on one line.
+
+| Key | Default |
+| --- | --- |
+| `begin` | Type apply to begin, or help to look around. (`apply` and `help` are shown in the accent colour wherever they appear) |
+| `notFound` | Command not found. Try help. |
+| `goodbye` | See you. |
+| `firstQuestion` | Enter moves on. Choices take one key press. |
+| `reviewTitle` | Here's what you wrote. |
+| `reviewHint` | Press Enter to send, or type a number to edit that answer. |
+| `received` | ✓ Received. Thank you. |
+| `nextTitle` | What happens next |
+| `idLabel` | Your application ID: |
+| `stopped` | Stopped. Nothing was sent. |
+
+The reasons an answer gets refused ("Too short: that's 12 characters…") are written to tell people exactly what to fix. They live in `src/apply.sh` and `src/validate.js`.
+
 ## Secrets and settings
 
 These go in `.dev.vars` locally and are set with `npx wrangler secret put <NAME>` in production:
@@ -176,6 +221,5 @@ These go in `.dev.vars` locally and are set with `npx wrangler secret put <NAME>
 
 ## Going further
 
-- **Colours** are set near the top of `src/apply.sh`: `A` is the accent, `R` errors and `G` success. They're 256-colour codes.
-- **The junk and temporary-inbox lists** are `JUNK` and `DISPOSABLE` in `src/render.js`. Both the script and the server use them.
+- **The built-in junk and temporary-inbox lists** are `JUNK` and `DISPOSABLE` in `src/render.js`. For your own additions, use `checks` in the config instead.
 - **Changing the checks themselves** means editing `check_answer` in `src/apply.sh` and `src/validate.js` the same way. `npm test` fails if the two disagree on a set of sample answers.

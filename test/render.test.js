@@ -57,14 +57,27 @@ test("sheet columns: session details, one per question, then Status and Notes", 
   assert.deepEqual(cols.slice(-2), ["Status", "Notes"]);
 });
 
+test("messages and theme reach the script", () => {
+  const c = clone(defaultConfig);
+  c.messages = { begin: "Press apply, or help if you're lost.", received: "Got it!" };
+  c.theme = { accent: 33 };
+  const lib = scriptLibrary(checkConfig(c));
+  assert.equal(bash(lib, `A='<'; N='>'; begin_line`), "Press <apply>, or <help> if you're lost.\n");
+  assert.equal(bash(lib, `printf '%s|%s|%s' "$MSG_RECEIVED" "$MSG_GOODBYE" "$ACCENT"`), "Got it!|See you.|33");
+});
+
 test("checkConfig explains mistakes", () => {
   const bad = clone(defaultConfig);
   bad.questions = [...bad.questions, { key: "email", type: "choice", label: "Again", prompt: "?", options: ["a|b", "c"] }];
   bad.idPrefix = "acme";
   bad.digest = ["nope"];
   bad.pages = [...bad.pages, { command: "help", body: "" }];
+  bad.theme = { accent: 300, glow: 1 };
+  bad.messages = { recieved: "typo", begin: "two\nlines" };
+  bad.checks = { maxLinks: 0, extraJunk: ["two words"] };
   assert.throws(() => checkConfig(bad), (e) => {
-    for (const bit of ["idPrefix", "used twice", 'without "|"', "digest lists", "built in"]) assert.match(e.message, new RegExp(bit.replace(/[|()]/g, "\\$&")));
+    for (const bit of ["idPrefix", "used twice", 'without "|"', "digest lists", "built in", "theme.accent", "theme.glow",
+      "messages.recieved", "messages.begin", "checks.maxLinks", "checks.extraJunk"]) assert.match(e.message, new RegExp(bit.replace(/[|()]/g, "\\$&")));
     return true;
   });
 });

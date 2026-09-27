@@ -21,7 +21,8 @@ if ! command -v curl >/dev/null 2>&1; then
 fi
 
 if [ -t 1 ]; then
-  B=$'\033[1m'; D=$'\033[2m'; A=$'\033[38;5;141m'; R=$'\033[38;5;203m'; G=$'\033[38;5;114m'; N=$'\033[0m'
+  B=$'\033[1m'; D=$'\033[2m'; N=$'\033[0m'
+  A=$'\033[38;5;'"$ACCENT"'m'; R=$'\033[38;5;'"$ERROR"'m'; G=$'\033[38;5;'"$SUCCESS"'m'
 else
   B=""; D=""; A=""; R=""; G=""; N=""
 fi
@@ -46,7 +47,7 @@ valid_email() { case "$1" in *" "*) return 1 ;; ?*@?*.?*) return 0 ;; *) return 
 lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
 words() { printf '%s' "$1" | wc -w | tr -d ' '; }
 is_ascii() { ! printf '%s' "$1" | LC_ALL=C grep -q '[^ -~]'; }
-stop() { printf '\n%sStopped. Nothing was sent.%s\n' "$D" "$N"; exit 130; }
+stop() { printf '\n%s%s%s\n' "$D" "$MSG_STOPPED" "$N"; exit 130; }
 
 banner() {
   printf '%s' "$A"; logo; printf '%s\n' "$N"
@@ -56,7 +57,7 @@ banner() {
   echo
   intro
   echo
-  say "Type ${A}apply${N} to begin, or ${A}help${N} to look around."
+  begin_line
   echo
 }
 
@@ -72,12 +73,12 @@ shell_loop() {
     case "$lc" in
       apply|start|./apply) return ;;
       clear) clear 2>/dev/null || printf '\n\n' ;;
-      exit|quit|logout|:q|:wq) say "See you."; exit 0 ;;
-      site|web|website) if [ -n "$WEBSITE" ]; then say "$WEBSITE"; else say "Command not found. Try help."; fi; echo ;;
+      exit|quit|logout|:q|:wq) say "$MSG_GOODBYE"; exit 0 ;;
+      site|web|website) if [ -n "$WEBSITE" ]; then say "$WEBSITE"; else say "$MSG_NOT_FOUND"; fi; echo ;;
       *)
         case "$PAGES" in
           *" $lc "*) page "$lc"; echo ;;
-          *) hidden "$lc" || say "Command not found. Try help." ;;
+          *) hidden "$lc" || say "$MSG_NOT_FOUND" ;;
         esac ;;
     esac
   done
@@ -122,7 +123,7 @@ check_answer() {
         fi
       done
       set +f
-      if [ "$count" -gt 8 ]; then echo "That's $count links, and the limit is 8. Keep your best ones."; return 1; fi ;;
+      if [ "$count" -gt "$MAX_LINKS" ]; then echo "That's $count links, and the limit is $MAX_LINKS. Keep your best ones."; return 1; fi ;;
   esac
 
   if [ "${PROSE[$i]}" = 1 ]; then
@@ -210,14 +211,14 @@ review() {
   local i v choice
   while :; do
     echo
-    printf '%sHere'"'"'s what you wrote.%s\n\n' "$B" "$N"
+    printf '%s%s%s\n\n' "$B" "$MSG_REVIEW_TITLE" "$N"
     for ((i = 0; i < TOTAL; i++)); do
       v="${ANSWERS[$i]:-}"
       if [ -z "$v" ]; then v="${D}(skipped)${N}"; else v=$(clip "$v" 48); fi
       printf '  %s%2d%s  %-18s %s\n' "$A" $((i+1)) "$N" "$(clip "${LABEL[$i]}" 18)" "$v"
     done
     echo
-    dim "Press Enter to send, or type a number to edit that answer."
+    dim "$MSG_REVIEW_HINT"
     choice=""
     IFS= read -r -p "› " choice || stop
     choice=$(trim "$choice")
@@ -266,11 +267,11 @@ submit() {
 
 done_screen() {
   echo
-  printf '%s✓ Received. Thank you.%s\n\n' "$G$B" "$N"
-  printf '%sWhat happens next%s\n' "$B" "$N"
+  printf '%s%s%s\n\n' "$G$B" "$MSG_RECEIVED" "$N"
+  printf '%s%s%s\n' "$B" "$MSG_NEXT_TITLE" "$N"
   next_steps
   echo
-  printf '%sYour application ID:%s %s%s%s\n\n' "$D" "$N" "$A" "$APP_ID" "$N"
+  printf '%s%s%s %s%s%s\n\n' "$D" "$MSG_ID_LABEL" "$N" "$A" "$APP_ID" "$N"
   closing
   echo
 }
@@ -289,7 +290,7 @@ main() {
     else err "$(clip "$(trim "$TOKEN")" 200)"; fi
     exit 1
   fi
-  dim "Enter moves on. Choices take one key press."
+  dim "$MSG_FIRST"
   local s
   for ((s = 0; s < TOTAL; s++)); do ask_step "$s"; done
   review

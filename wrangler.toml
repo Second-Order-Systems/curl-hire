@@ -1,0 +1,23 @@
+name = "curl-hire"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+
+# Stores a backup of every application (and the hourly rate limit).
+# Create it with:  npx wrangler kv namespace create APPS
+# then paste the id it prints below.
+[[kv_namespaces]]
+binding = "APPS"
+id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
+
+# Out of the box the app runs at https://curl-hire.<your-subdomain>.workers.dev.
+# For your own domain (it must be on Cloudflare), uncomment this. Cloudflare
+# creates the DNS record for you, and the rest of your site is untouched.
+# routes = [
+#   { pattern = "apply.example.com", custom_domain = true }
+# ]
+
+# Lets the Worker import apply.sh as plain text.
+[[rules]]
+type = "Text"
+globs = ["**/*.sh"]
+fallthrough = true

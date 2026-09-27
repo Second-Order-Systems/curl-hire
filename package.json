@@ -1,0 +1,21 @@
+{
+  "name": "curl-hire",
+  "version": "1.0.0",
+  "description": "Let engineers apply from the terminal: curl -sL apply.yourco.com | bash. Runs free on Cloudflare Workers, lands in a Google Sheet.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "preview": "node scripts/preview.js",
+    "smoke": "node scripts/smoke.js",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

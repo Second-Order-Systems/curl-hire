@@ -1,0 +1,13 @@
+# Local settings for `npm run dev`. Copy to .dev.vars (it's gitignored).
+# In production, set these with `npx wrangler secret put <NAME>` instead.
+
+# Signs session tokens and protects /export. Any long random string.
+EXPORT_TOKEN=local-dev-only-change-me
+
+# Optional: send local test applications to a Google Sheet too.
+# SHEET_WEBHOOK_URL=https://script.google.com/macros/s/.../exec
+# SHEET_SECRET=
+
+# Local testing only: skip the 45-second minimum and the hourly limit.
+MIN_SECONDS=0
+MAX_PER_HOUR=1000

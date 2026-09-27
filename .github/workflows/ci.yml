@@ -1,0 +1,25 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest] # macOS runs the script on its stock bash 3.2
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Worker bundles
+        run: npx wrangler deploy --dry-run --outdir dist
+      - name: Shellcheck the generated scripts
+        if: runner.os == 'Linux'
+        run: |
+          node scripts/preview.js > default.sh
+          node scripts/preview.js examples/2os.config.js > 2os.sh
+          shellcheck -S error default.sh 2os.sh
